@@ -128,6 +128,7 @@ app.layout = dbc.Container([
                                 max_date_allowed=datetime(2027, 12, 31),
                                 start_date=datetime.now().date(),
                                 end_date=datetime(datetime.now().year, 12, 31),
+                                minimum_nights=0,
                                 className="bg-dark text-white border-secondary",
                                 style={'fontSize': '11px'}
                             )
@@ -292,14 +293,25 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
         df['district'] = df.get('district', pd.Series([None]*len(df)))
         df.loc[df['district'].isnull(), 'district'] = df['location'].map(dist_map).fillna('Other')
 
-    # Apply Date Filters first to the raw snapshots
+    # Ensure dates are in datetime format for robust filtering
+    df['stay_date'] = pd.to_datetime(df['stay_date'])
+    if not trends_df.empty:
+        trends_df['stay_date'] = pd.to_datetime(trends_df['stay_date'])
+
+    # Apply Date Filters
     if start_date:
-        df = df[df['stay_date'] >= start_date]
+        start_dt = pd.to_datetime(start_date)
+        df = df[df['stay_date'] >= start_dt]
+        if not trends_df.empty:
+            trends_df = trends_df[trends_df['stay_date'] >= start_dt]
     if end_date:
-        df = df[df['stay_date'] <= end_date]
+        end_dt = pd.to_datetime(end_date)
+        df = df[df['stay_date'] <= end_dt]
+        if not trends_df.empty:
+            trends_df = trends_df[trends_df['stay_date'] <= end_dt]
     
     # Calculate days in period for capacity validation
-    days_count = 7 # Default to 7 if no filter
+    days_count = 7 # Default
     if start_date and end_date:
         try:
             d1 = datetime.strptime(start_date, '%Y-%m-%d')
