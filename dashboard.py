@@ -364,14 +364,16 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
                              sub_df.drop(columns=['Hotel Name']), 
                              left_on='Matched Sub Name', right_on='Hotel Name Clean', how='left')
     
-    master_df['Submitted Nights'] = master_df['Submitted Nights'].fillna(0)
-    master_df['Tax Submitted'] = master_df['Tax Submitted'].fillna(0)
-    master_df['total_nights'] = master_df['total_nights'].fillna(0)
-    
+    # Pro-rate Submitted Data if the period is not a full month (approx 30 days)
+    # This prevents 1-day scrapes from looking like 100% tax loss.
+    period_ratio = min(1.0, days_count / 30.0)
+    master_df['Submitted_Nights_Adj'] = master_df['Submitted Nights'] * period_ratio
+    master_df['Tax_Submitted_Adj'] = master_df['Tax Submitted'] * period_ratio
+
     # Calculations
-    master_df['Missing Nights'] = master_df['total_nights'] - master_df['Submitted Nights']
+    master_df['Missing Nights'] = master_df['total_nights'] - master_df['Submitted_Nights_Adj']
     master_df['Tax Expected (RM)'] = master_df['total_nights'] * 3.0
-    master_df['Tax Loss (RM)'] = master_df['Tax Expected (RM)'] - master_df['Tax Submitted']
+    master_df['Tax Loss (RM)'] = master_df['Tax Expected (RM)'] - master_df['Tax_Submitted_Adj']
     
     # Status Logic
     def get_status(row):
@@ -405,12 +407,15 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
     reg_props = len(filtered_df[filtered_df['Registration Status'].str.upper().isin(['ACTIVE', 'REGISTERED', 'PENDING'])])
     unreg_props = total_props - reg_props
     total_scraped = int(filtered_df['total_nights'].sum())
-    total_submitted = int(filtered_df['Submitted Nights'].sum())
-    missing_nights = total_scraped - total_submitted
-    tax_actual = filtered_df['Tax Submitted'].sum()
+    
+    # Use Adjusted values for Summary Metrics
+    total_submitted_adj = filtered_df['Submitted_Nights_Adj'].sum()
+    missing_nights = total_scraped - total_submitted_adj
+    tax_actual_adj = filtered_df['Tax_Submitted_Adj'].sum()
     tax_expect = filtered_df['Tax Expected (RM)'].sum()
     tax_leakage = filtered_df['Tax Loss (RM)'].sum()
-    comp_rate = (tax_actual / tax_expect * 100) if tax_expect > 0 else 100
+    
+    comp_rate = (tax_actual_adj / tax_expect * 100) if tax_expect > 0 else 100
     
     def make_metric_card(title, value, color, subtitle=None, delta=None, delta_higher_is_better=True):
         badge = None
@@ -475,14 +480,14 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
         # Row 2: Room-Nights Analysis
         dbc.Row([
             make_metric_card("Estimated Room-Nights (Scraped)", f"{total_scraped:,}", "primary", delta=calc_delta('nights')),
-            make_metric_card("Confirmed Room-Nights (Submitted)", f"{total_submitted:,}", "info"),
-            make_metric_card("Missing Room-Nights", f"{missing_nights:,}", "danger", delta_higher_is_better=False)
+            make_metric_card("Confirmed Room-Nights (Submitted)", f"{total_submitted_adj:,.0f}", "info"),
+            make_metric_card("Missing Room-Nights", f"{missing_nights:,.0f}", "danger", delta_higher_is_better=False)
         ], className="g-3 mb-3 w-100"),
 
         # Row 3: Tax Intelligence
         dbc.Row([
             make_metric_card("Estimated Tax from Scraped", f"RM{tax_expect:,.0f}", "primary", delta=calc_delta('tax')),
-            make_metric_card("Actual Tax Collected", f"RM{tax_actual:,.0f}", "success"),
+            make_metric_card("Actual Tax Collected", f"RM{tax_actual_adj:,.0f}", "success"),
             make_metric_card("Estimated Tax Leakage", f"RM{tax_leakage:,.0f}", "danger", delta_higher_is_better=False)
         ], className="g-3 w-100")
     ]
