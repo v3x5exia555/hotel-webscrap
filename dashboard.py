@@ -95,16 +95,18 @@ app.layout = dbc.Container([
                 dbc.CardBody([
                     dbc.Row([
                         dbc.Col([
-                            html.Label("Search Property", className="text-muted small"),
-                            dcc.Input(id="search-filter", placeholder="Search by name...", type="text", className="form-control bg-dark border-secondary text-white")
+                            html.Label("Search Property", className="text-light small fw-bold"),
+                            dcc.Input(id="search-filter", placeholder="Search by name...", type="text", 
+                                      className="form-control bg-dark border-info text-white shadow-none",
+                                      style={'color': 'white', 'fontWeight': '500'})
                         ], width=2),
                         dbc.Col([
-                            html.Label("District", className="text-muted small"),
-                            dcc.Dropdown(id="district-filter", multi=True, placeholder="All Districts", className="bg-dark text-white")
+                            html.Label("District", className="text-light small fw-bold"),
+                            dcc.Dropdown(id="district-filter", multi=True, placeholder="All Districts", className="text-dark")
                         ], width=2),
                         dbc.Col([
-                            html.Label("Area", className="text-muted small"),
-                            dcc.Dropdown(id="area-filter", multi=True, placeholder="All Areas", className="bg-dark text-white")
+                            html.Label("Area", className="text-light small fw-bold"),
+                            dcc.Dropdown(id="area-filter", multi=True, placeholder="All Areas", className="text-dark")
                         ], width=2),
                         dbc.Col([
                             html.Label("Platform", className="text-muted small"),
@@ -313,8 +315,10 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
         'district': 'last',
         'platform': lambda x: ", ".join(sorted(x.unique())),
         'hotel_type': 'last',
-        'rooms_left_calc': 'sum'
+        'rooms_left_calc': 'sum',
+        'scraped_at': 'max'
     }).reset_index()
+    hotel_stats['scan_date_disp'] = pd.to_datetime(hotel_stats['scraped_at']).dt.strftime('%Y-%m-%d')
     hotel_stats.rename(columns={'rooms_left_calc': 'total_nights'}, inplace=True)
     
     # Normalize names for merging
@@ -472,8 +476,9 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
     ]
 
     # Tables
-    audit_disp = filtered_df[['hotel_name', 'location', 'district', 'total_nights', 'Submitted Nights', 'Status', 'Tax Loss (RM)']].copy()
-    audit_disp.columns = ['Property', 'Area', 'District', 'Scraped', 'Gov Confirmed', 'Status', 'Tax Loss (RM)']
+    audit_disp = filtered_df[['hotel_name', 'location', 'district', 'total_nights', 'Submitted Nights', 'Status', 'Tax Loss (RM)', 'scan_date_disp']].copy()
+    audit_disp.insert(0, '#', range(1, len(audit_disp) + 1))
+    audit_disp.columns = ['#', 'Property', 'Area', 'District', 'Scraped', 'Gov Confirmed', 'Status', 'Tax Loss (RM)', 'Scan Date 📅']
     audit_table = dash_table.DataTable(
         data=audit_disp.to_dict('records'), columns=[{"name": i, "id": i} for i in audit_disp.columns],
         style_header={'backgroundColor': '#1a1a1a', 'color': '#0dcaf0'},
@@ -482,12 +487,17 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
     )
 
     priority_df = filtered_df[filtered_df['Status'].isin(['CRITICAL', 'HIGH'])].sort_values(by='Tax Loss (RM)', ascending=False)
+    priority_disp = priority_df[['hotel_name', 'Operator', 'location', 'district', 'platform', 'Registration Status', 'total_nights', 'Submitted Nights', 'scan_date_disp']].copy()
+    priority_disp.insert(0, '#', range(1, len(priority_disp) + 1))
     priority_table = dash_table.DataTable(
-        data=priority_df[['hotel_name', 'Operator', 'location', 'platform', 'Registration Status', 'total_nights', 'Submitted Nights']].to_dict('records'),
+        data=priority_disp.to_dict('records'),
         columns=[
+            {"name": "#", "id": "#"},
             {"name": "Property", "id": "hotel_name"},
             {"name": "Operator", "id": "Operator"},
             {"name": "Area", "id": "location"},
+            {"name": "District", "id": "district"},
+            {"name": "Scan Date 📅", "id": "scan_date_disp"},
             {"name": "Platform", "id": "platform"},
             {"name": "Registration", "id": "Registration Status"},
             {"name": "Est Nights", "id": "total_nights"},
@@ -500,10 +510,16 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
 
     # Capacity Table
     cap_df = filtered_df.sort_values(by=['Possible?', 'total_nights'], ascending=[True, False])
+    cap_disp = cap_df[['hotel_name', 'location', 'district', 'Rooms', 'Max Possible Nights', 'total_nights', 'Possible?', 'scan_date_disp']].copy()
+    cap_disp.insert(0, '#', range(1, len(cap_disp) + 1))
     capacity_table = dash_table.DataTable(
-        data=cap_df[['hotel_name', 'Rooms', 'Max Possible Nights', 'total_nights', 'Possible?']].to_dict('records'),
+        data=cap_disp.to_dict('records'),
         columns=[
+            {"name": "#", "id": "#"},
             {"name": "Property", "id": "hotel_name"},
+            {"name": "Area", "id": "location"},
+            {"name": "District", "id": "district"},
+            {"name": "Scan Date 📅", "id": "scan_date_disp"},
             {"name": "Rooms", "id": "Rooms"},
             {"name": "Max Supportable", "id": "Max Possible Nights"},
             {"name": "Est Nights", "id": "total_nights"},
@@ -581,15 +597,22 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
                                       title="<b>Daily Rooms Reserved</b>")
 
         # 2. Top Performing Properties Table
+        # Merge with hotel_stats to get district/location for trends
         property_velocity = trends_df.groupby(['hotel_name', 'platform']).agg({
             'pickup_count': 'sum',
             'estimated_revenue': 'sum'
         }).reset_index().sort_values(by='pickup_count', ascending=False).head(15)
         
+        property_velocity = pd.merge(property_velocity, hotel_stats[['hotel_name', 'location', 'district']], on='hotel_name', how='left')
+        property_velocity.insert(0, '#', range(1, len(property_velocity) + 1))
+        
         pickup_table = dash_table.DataTable(
             data=property_velocity.to_dict('records'),
             columns=[
+                {"name": "#", "id": "#"},
                 {"name": "Property", "id": "hotel_name"},
+                {"name": "Area", "id": "location"},
+                {"name": "District", "id": "district"},
                 {"name": "Platform", "id": "platform"},
                 {"name": "Rooms Reserved", "id": "pickup_count"},
                 {"name": "Est. Revenue (RM)", "id": "estimated_revenue"}
