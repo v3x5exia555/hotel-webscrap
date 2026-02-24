@@ -1,0 +1,51 @@
+districts:
+  - name: "Bentong"
+    areas:
+      - name: "Genting Highlands"
+        agoda_city_id: "4684"
+      - name: "Bukit Tinggi"
+        agoda_city_id: "209208"
+      - name: "Janda Baik"
+        agoda_city_id: "512864"
+      - name: "Bentong Town"
+        agoda_city_id: "513008"
+  - name: "Cameron Highlands"
+    areas:
+      - name: "Cameron Highlands"
+        agoda_city_id: "1399"
+  - name: "Jerantut"
+    areas:
+      - name: "Jerantut"
+        agoda_city_id: "162280"
+  - name: "Kuantan"
+    areas:
+      - name: "Kuantan"
+        agoda_city_id: "3241"
+  - name: "Lipis"
+    areas:
+      - name: "Lipis"
+        agoda_city_id: "211407"
+  - name: "Maran"
+    areas:
+      - name: "Maran"
+        agoda_city_id: "211543"
+  - name: "Pekan"
+    areas:
+      - name: "Pekan"
+        agoda_city_id: "211646"
+  - name: "Raub"
+    areas:
+      - name: "Raub"
+        agoda_city_id: "211731"
+  - name: "Rompin"
+    areas:
+      - name: "Rompin"
+        agoda_city_id: "211414"
+  - name: "Temerloh"
+    areas:
+      - name: "Temerloh"
+        agoda_city_id: "212177"
+  - name: "Bera"
+    areas:
+      - name: "Bera"
+        agoda_city_id: "207799"

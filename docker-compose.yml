@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  dashboard:
+    build: .
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./configs:/app/configs
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  scraper:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./configs:/app/configs
+    command: ["python", "main.py", "--week"]
+    restart: "no" # Runs once for a week, then stops or can be scheduled

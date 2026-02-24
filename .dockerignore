@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+*.log
+.git/
+data/agoda/*
+data/bookingcom/*
+!data/property_registration.csv
+!data/submitted_records.csv
+.env
+.ipynb_checkpoints/
+*.db
+!data/hotel_data.db
+bin/
+node_modules/
