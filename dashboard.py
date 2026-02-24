@@ -471,24 +471,24 @@ def update_dashboard(n, n_clicks, search_val, district_val, area_val, platform_v
     summary_cards = [
         # Row 1: Property Basics
         dbc.Row([
-            make_metric_card("Total Properties", f"{total_props}", "info", delta=calc_delta('props')),
+            make_metric_card("Total Properties", f"{total_props}", "info"),
             make_metric_card("Registered", f"{reg_props}", "success"),
-            make_metric_card("Unregistered", f"{unreg_props}", "warning", delta_higher_is_better=False),
+            make_metric_card("Unregistered", f"{unreg_props}", "warning"),
             make_metric_card("Compliance Rate", f"{comp_rate:.1f}%", "success" if comp_rate > 80 else "warning")
         ], className="g-3 mb-3 w-100"),
         
         # Row 2: Room-Nights Analysis
         dbc.Row([
-            make_metric_card("Estimated Room-Nights (Scraped)", f"{total_scraped:,}", "primary", delta=calc_delta('nights')),
+            make_metric_card("Estimated Room-Nights (Scraped)", f"{total_scraped:,}", "primary"),
             make_metric_card("Confirmed Room-Nights (Submitted)", f"{total_submitted_adj:,.0f}", "info"),
-            make_metric_card("Missing Room-Nights", f"{missing_nights:,.0f}", "danger", delta_higher_is_better=False)
+            make_metric_card("Missing Room-Nights", f"{missing_nights:,.0f}", "danger")
         ], className="g-3 mb-3 w-100"),
 
         # Row 3: Tax Intelligence
         dbc.Row([
-            make_metric_card("Estimated Tax from Scraped", f"RM{tax_expect:,.0f}", "primary", delta=calc_delta('tax')),
+            make_metric_card("Estimated Tax from Scraped", f"RM{tax_expect:,.0f}", "primary"),
             make_metric_card("Actual Tax Collected", f"RM{tax_actual_adj:,.0f}", "success"),
-            make_metric_card("Estimated Tax Leakage", f"RM{tax_leakage:,.0f}", "danger", delta_higher_is_better=False)
+            make_metric_card("Estimated Tax Leakage", f"RM{tax_leakage:,.0f}", "danger")
         ], className="g-3 w-100")
     ]
 
