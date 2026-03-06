@@ -151,3 +151,10 @@ def get_browser_config(use_proxy=False):
             
     return config
 
+def apply_stealth(context):
+    """Applies common stealth scripts to a Playwright context."""
+    # Hide automation webdriver property
+    context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    # Add other common detection bypasses if needed
+
+
