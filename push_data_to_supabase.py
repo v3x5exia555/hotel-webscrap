@@ -8,6 +8,8 @@ except ImportError:
 
 from dotenv import load_dotenv
 import logging
+import hashlib
+import numpy as np
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -63,13 +65,11 @@ def sync_data():
                     continue
 
                 # Fix NaN values
-                import numpy as np
                 df = df.replace({np.nan: None, np.inf: None, -np.inf: None})
                 
-                records = df.to_dict('records')
-                
-                # Clean records
-                def clean_record(r):
+                # Clean records and generate custom ID as requested
+                def clean_record(row_tuple):
+                    index, r = row_tuple
                     cleaned = {}
                     for k, v in r.items():
                         if pd.isna(v): cleaned[k] = None
@@ -77,10 +77,22 @@ def sync_data():
                             try: cleaned[k] = int(float(v))
                             except: cleaned[k] = None
                         else: cleaned[k] = v
-                    if 'id' in cleaned: del cleaned['id']
+                    
+                    # USER REQUEST: Update ID with hash(session) + index/unique_string
+                    # We use a deterministic hash of the natural key to serve as the stable ID
+                    if table_name == "snapshots":
+                        # Composite key for snapshots
+                        natural_key = f"{r.get('hotel_name')}_{r.get('platform')}_{r.get('stay_date')}_{r.get('nights')}_{r.get('scraped_at')}"
+                    else:
+                        # Composite key for pickup_trends
+                        natural_key = f"{r.get('hotel_name')}_{r.get('stay_date')}_{r.get('nights')}_{r.get('platform')}_{r.get('calculation_date')}_{r.get('detected_at')}"
+                    
+                    # Generate stable 32-char hex ID
+                    cleaned['id'] = hashlib.md5(natural_key.encode()).hexdigest()
+                    
                     return cleaned
                 
-                records = [clean_record(r) for r in records]
+                records = [clean_record(item) for item in df.iterrows()]
                 
                 # Upload to Supabase in smaller API chunks
                 api_chunk_size = 100
@@ -90,9 +102,12 @@ def sync_data():
                     chunk = records[j:j+api_chunk_size]
                     try:
                         schema_name = os.environ.get("SUPABASE_SCHEMA", "analysis_hotel")
-                        supabase.schema(schema_name).table(table_name).upsert(chunk).execute()
+                        
+                        # Use the new varchar 'id' for conflict resolution
+                        supabase.schema(schema_name).table(table_name).upsert(chunk, on_conflict="id").execute()
                     except Exception as e:
                         logger.error(f"❌ Failed to upload chunk at offset {offset+j} in {table_name}: {e}")
+
                         # Don't break entirely, try next chunk
                 
                 logger.info(f"✅ Progress for '{table_name}': {min(offset + batch_size, total_records):,}/{total_records:,}")
