@@ -1,7 +1,11 @@
 import os
 import sqlite3
 import pandas as pd
-from supabase import create_client, Client
+try:
+    from supabase import create_client, Client
+except ImportError:
+    from supabase_py import create_client, Client # Fallback for older versions if any
+
 from dotenv import load_dotenv
 import logging
 
@@ -38,14 +42,22 @@ def sync_data():
         
         for table_name in tables:
             cursor = conn.cursor()
-            cursor.execute(f"SELECT count(*) FROM {table_name}")
-            total_count = cursor.fetchone()[0]
-            logger.info(f"📊 Table '{table_name}': Found {total_count:,} total records.")
+            # Optimization: Only sync data from the last 2 days to avoid duplicate key errors on historical records
+            date_col = "scraped_at" if table_name == "snapshots" else "detected_at"
+            sync_query = f"SELECT * FROM {table_name} WHERE date({date_col}) >= date('now', '-2 days')"
             
-            # Fetch and upload in large batches from SQLite
+            df_full = pd.read_sql_query(sync_query, conn)
+            total_records = len(df_full)
+            logger.info(f"📊 Table '{table_name}': Found {total_records:,} recent records to sync.")
+            
+            if df_full.empty:
+                continue
+
+            # Fetch and upload in large batches
             batch_size = 5000 
-            for offset in range(0, total_count, batch_size):
-                df = pd.read_sql_query(f"SELECT * FROM {table_name} LIMIT {batch_size} OFFSET {offset}", conn)
+            for offset in range(0, total_records, batch_size):
+                df = df_full.iloc[offset : offset + batch_size]
+
                 
                 if df.empty:
                     continue
@@ -83,7 +95,7 @@ def sync_data():
                         logger.error(f"❌ Failed to upload chunk at offset {offset+j} in {table_name}: {e}")
                         # Don't break entirely, try next chunk
                 
-                logger.info(f"✅ Progress for '{table_name}': {min(offset + batch_size, total_count):,}/{total_count:,}")
+                logger.info(f"✅ Progress for '{table_name}': {min(offset + batch_size, total_records):,}/{total_records:,}")
 
         conn.close()
         logger.info("✨ Full sync to Supabase completed successfully!")
