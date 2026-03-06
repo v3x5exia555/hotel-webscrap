@@ -60,21 +60,24 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
 
             logger.info(f"[Agoda] Loading more results...")
             while len(hotels_data) < target_count:
+                # Primary selector: hotel-item is confirmed working on live Agoda
+                card_sel = '[data-selenium="hotel-item"]'
                 try:
-                    page.wait_for_selector('[data-selenium="hotel-item"], .PropertyCard__Link, [data-selenium="property-card"]', timeout=30000)
+                    page.wait_for_selector(card_sel, timeout=SCRAPER_CONFIG['selector_timeout'] * 1000)
                 except:
                     break
 
-                # Scroll to trigger lazy loading
-                for _ in range(5):
+                # Scroll slowly to trigger lazy loading (Agoda loads data-selenium attrs on scroll)
+                for _ in range(8):
                     page.keyboard.press("PageDown")
-                    time.sleep(1)
+                    time.sleep(1.5)
                 
                 # Scroll to bottom
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                time.sleep(2)
+                time.sleep(3)  # Extra wait for lazy-loaded attributes to populate
 
-                cards = page.locator('[data-selenium="hotel-item"], .PropertyCard__Link, [data-selenium="property-card"]').all()
+                cards = page.locator(card_sel).all()
+                logger.info(f"[Agoda] Found {len(cards)} hotel cards on page")
                 for card in cards:
                     if len(hotels_data) >= target_count:
                         break
