@@ -17,14 +17,9 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
     
     with sync_playwright() as p:
         browser_cfg = get_browser_config(use_proxy=use_proxy)
-        # Stealth: Add args to hide automation
-        browser = p.chromium.launch(
-            headless=True, 
-            args=["--disable-blink-features=AutomationControlled"]
-        )
+        # Using Firefox instead of Chromium - often better for bypassing bot detection
+        browser = p.firefox.launch(headless=True)
         context = browser.new_context(**browser_cfg)
-        # Extra stealth: Ensure navigator.webdriver is false
-        context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = context.new_page()
         
         hotels_data = []
