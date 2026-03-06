@@ -29,7 +29,7 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
             nav_timeout = SCRAPER_CONFIG['timeout'] * 1000  # convert seconds to ms
             for attempt in range(max_retries):
                 try:
-                    page.goto(url, timeout=nav_timeout, wait_until="load")
+                    page.goto(url, timeout=nav_timeout, wait_until="domcontentloaded")
                     break
                 except Exception as e:
                     if attempt == max_retries - 1: raise e
