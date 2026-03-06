@@ -30,12 +30,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 LOG_DIR = PROJECT_ROOT / "scripts" / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-PLATFORMS = ["booking", "agoda", "traveloka"]
+PLATFORMS = ["booking", "agoda", "traveloka", "airbnb"]
 
 PLATFORM_COLORS = {
     "booking": "\033[94m",   # Blue
     "agoda":   "\033[92m",   # Green
     "traveloka": "\033[95m", # Magenta
+    "airbnb": "\033[93m",    # Yellow
 }
 RESET = "\033[0m"
 BOLD  = "\033[1m"

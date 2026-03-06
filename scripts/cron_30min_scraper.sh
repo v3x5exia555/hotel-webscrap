@@ -39,9 +39,8 @@ fi
 
 # Run the parallel platforms scraper
 # --week: 7 days ahead
-# --workers 1: safer for repeated cron jobs to avoid overlapping resources
-# (Using 1 worker per platform to keep it steady on background)
-python3 scripts/run_parallel_platforms.py --week --workers 4 >> logs/cron_scraper.log 2>&1
+# --platforms agoda airbnb: filter to specific platforms
+python3 scripts/run_parallel_platforms.py --week --workers 4 --platforms agoda airbnb >> logs/cron_scraper.log 2>&1
 
 echo "✅ Cron run finished at: $(date)" >> logs/cron_scraper.log
 echo "------------------------------------------------------------" >> logs/cron_scraper.log
