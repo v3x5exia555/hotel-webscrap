@@ -3,7 +3,7 @@
 # ===========================================
 
 # Page navigation timeout in seconds (converted to ms in code)
-timeout: 180
+timeout: 60
 
 # Number of retries for page navigation failures
 retry: 2
