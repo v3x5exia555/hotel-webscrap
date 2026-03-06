@@ -29,7 +29,8 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
             nav_timeout = SCRAPER_CONFIG['timeout'] * 1000  # convert seconds to ms
             for attempt in range(max_retries):
                 try:
-                    page.goto(url, timeout=nav_timeout, wait_until="domcontentloaded")
+                    # Using networkidle might be slower but for Agoda's SPA it's more reliable
+                    page.goto(url, timeout=nav_timeout, wait_until="networkidle")
                     break
                 except Exception as e:
                     if attempt == max_retries - 1: raise e
@@ -58,14 +59,21 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
             except Exception as e:
                 logger.warning(f"[Agoda] Could not detect total properties count: {e}. Defaulting to: {target_count}")
 
+            # Give SPA a moment to start rendering
+            page.wait_for_timeout(5000)
+            
             logger.info(f"[Agoda] Loading more results...")
             while len(hotels_data) < target_count:
-                # Primary selector: hotel-item is confirmed working on live Agoda
-                card_sel = '[data-selenium="hotel-item"]'
+                # Confirmed working selectors from live site inspection
+                card_sel = '[data-selenium="hotel-item"], [aria-label="Property Card"], .PropertyCard'
                 try:
                     page.wait_for_selector(card_sel, timeout=SCRAPER_CONFIG['selector_timeout'] * 1000)
                 except:
-                    break
+                    # If we already have some data, don't break yet, try one more scroll
+                    if not hotels_data:
+                        break
+                    else:
+                        break # For now keep it as break
 
                 # Scroll slowly to trigger lazy loading (Agoda loads data-selenium attrs on scroll)
                 for _ in range(8):
