@@ -3,6 +3,8 @@ import os
 import yaml
 import argparse
 import inspect
+import random
+import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Add the current directory to path so we can import from scrapers and utils
@@ -20,6 +22,10 @@ def scrape_platform_task(platform, loc, d_ahead, n_duration, use_proxy, base_dat
     name = loc.get('name')
     district = loc.get('district')
     agoda_id = loc.get('agoda_city_id')
+    
+    # Random delay between tasks to avoid rate-limiting
+    delay = random.uniform(3, 8)
+    time.sleep(delay)
     
     logger.info(f"--- [Task] Platform: {platform.upper()} | Area: {name} | Day Ahead: {d_ahead} | Nights: {n_duration} | Start: {base_date or 'Today'} ---")
     
