@@ -194,6 +194,9 @@ def scrape_airbnb(location="Kuala Lumpur", district="Unknown", days_ahead=28, ni
             if hotels_data:
                 save_to_csv(hotels_data, platform="Airbnb", days_ahead=days_ahead, nights=nights, location=location)
                 save_snapshot(hotels_data)
+                logger.info(f"[Airbnb] ✅ Saved {len(hotels_data)} items for {location}")
+            else:
+                logger.warning(f"[Airbnb] ⚠️ No data extracted for {location}")
                 
         except Exception as e:
             logger.error(f"[Airbnb] Scraper Error: {e}")

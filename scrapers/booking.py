@@ -235,6 +235,9 @@ def scrape_booking(location="Kuala Lumpur", district="Unknown", days_ahead=28, n
             if hotels_data:
                 save_to_csv(hotels_data, platform="Booking.com", days_ahead=days_ahead, nights=nights, location=location)
                 save_snapshot(hotels_data)
+                logger.info(f"[Booking.com] ✅ Saved {len(hotels_data)} items for {location}")
+            else:
+                logger.warning(f"[Booking.com] ⚠️ No data extracted for {location}")
             
         except Exception as e:
             logger.error(f"[Booking.com] Error: {e}")

@@ -213,6 +213,9 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
             if hotels_data:
                 save_to_csv(hotels_data, platform="Agoda", days_ahead=days_ahead, nights=nights, location=location)
                 save_snapshot(hotels_data)
+                logger.info(f"[Agoda] ✅ Saved {len(hotels_data)} items for {location}")
+            else:
+                logger.warning(f"[Agoda] ⚠️ No data extracted for {location}")
                 
         except Exception as e:
             logger.error(f"[Agoda] Error: {e}")
