@@ -2,7 +2,7 @@ import time
 import sys
 from playwright.sync_api import sync_playwright
 from datetime import datetime
-from utils.helpers import get_future_date, save_to_csv, get_browser_config, logger, clean_price, get_month_name
+from utils.helpers import get_future_date, save_to_csv, get_browser_config, logger, clean_price, get_month_name, SCRAPER_CONFIG
 from utils.database import save_snapshot
 
 def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", days_ahead=9, nights=1, target_count=100, use_proxy=False, base_date=None):
@@ -24,11 +24,12 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
         seen_names = set()
         
         try:
-            # Retry logic for navigation
-            max_retries = 3
+            # Retry logic for navigation (from configs/config.yaml)
+            max_retries = SCRAPER_CONFIG['retry']
+            nav_timeout = SCRAPER_CONFIG['timeout'] * 1000  # convert seconds to ms
             for attempt in range(max_retries):
                 try:
-                    page.goto(url, timeout=60000, wait_until="load")
+                    page.goto(url, timeout=nav_timeout, wait_until="load")
                     break
                 except Exception as e:
                     if attempt == max_retries - 1: raise e
@@ -147,7 +148,7 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
                         if data_js['hotelType'] != "Hotel" and room_url:
                             try:
                                 room_page = context.new_page()
-                                room_page.goto(room_url, timeout=30000, wait_until="domcontentloaded")
+                                room_page.goto(room_url, timeout=SCRAPER_CONFIG['room_page_timeout'] * 1000, wait_until="domcontentloaded")
                                 room_page.wait_for_timeout(2000)
                                 
                                 # Agoda host selectors

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import pandas as pd
+import yaml
 import os
 import logging
 import sys
@@ -21,6 +22,36 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Load scraper config from configs/config.yaml
+# ---------------------------------------------------------------------------
+def load_config(config_path=None):
+    """Load scraper configuration from YAML. Returns dict with defaults."""
+    defaults = {
+        "timeout": 180,
+        "retry": 2,
+        "selector_timeout": 30,
+        "room_page_timeout": 30,
+    }
+    if config_path is None:
+        # Resolve relative to project root (two levels up from utils/)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        config_path = os.path.join(project_root, "configs", "config.yaml")
+
+    try:
+        with open(config_path, "r") as f:
+            cfg = yaml.safe_load(f) or {}
+        merged = {**defaults, **cfg}
+        logger.info(f"[Config] Loaded: timeout={merged['timeout']}s, retry={merged['retry']}")
+        return merged
+    except Exception as e:
+        logger.warning(f"[Config] Could not load {config_path}: {e}. Using defaults.")
+        return defaults
+
+
+SCRAPER_CONFIG = load_config()
 
 def get_future_date(days_ahead, base_date=None):
     """Returns a date string for N days in the future relative to base_date."""

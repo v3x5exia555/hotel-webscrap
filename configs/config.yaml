@@ -1,2 +1,15 @@
-# Timeout setting in seconds
+# ===========================================
+# Scraper Configuration
+# ===========================================
+
+# Page navigation timeout in seconds (converted to ms in code)
 timeout: 180
+
+# Number of retries for page navigation failures
+retry: 2
+
+# Timeout for waiting on specific selectors (seconds)
+selector_timeout: 30
+
+# Timeout for room detail page loads (seconds)
+room_page_timeout: 30
