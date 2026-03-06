@@ -12,8 +12,11 @@ BOOT_LOCK="/tmp/hotel_booting.lock"
 REFRESH_LOCK="/tmp/hotel_refresh.lock"
 
 # 0. Environment Setup
-cd "$(dirname "$0")" || exit
-mkdir -p "$LOG_DIR"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT" || exit
+mkdir -p "logs"
+LOG_DIR="logs"
 
 # 1. Check for Force Flag
 FORCE=0
@@ -61,11 +64,11 @@ nohup ./venv/bin/python3 dashboard.py > "$DASHBOARD_LOG" 2>&1 &
 
 # Start SSH Tunnel
 echo "🔒 Starting SSH Tunnel..."
-nohup ./bin/cloudflared tunnel --url ssh://localhost:22 > "$SSH_TUNNEL_LOG" 2>&1 &
+# nohup ./bin/cloudflared tunnel --url ssh://localhost:22 > "$SSH_TUNNEL_LOG" 2>&1 &
 
 # Start Dashboard Tunnel
 echo "🌐 Starting Dashboard Tunnel..."
-nohup ./bin/cloudflared tunnel --url http://localhost:$PORT > "$DASH_TUNNEL_LOG" 2>&1 &
+# nohup ./bin/cloudflared tunnel --url http://localhost:$PORT > "$DASH_TUNNEL_LOG" 2>&1 &
 
 echo "⏳ Initializing tunnels (15s)..."
 sleep 15

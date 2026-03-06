@@ -53,17 +53,19 @@ This document outlines how the system addresses key business questions regarding
 
 ---
 
-## 5. The Audit Matrix: Scraped vs. Actual vs. Expected
+## 5. The Audit Matrix: Scraped vs. Actual vs. Expected (Stay Date Focus)
 
 **Question:** _"How do we prove a hotel is under-reporting?"_
 
 ### Talking Points:
 
+- **The "Booking Window" Logic**: Unlike simple reports, our system focuses on the **Stay Date** (the Booking Window). We look at when the guest was actually in the room, not just when our robot scanned the website.
 - **The Three-Way Join**: Our system performs a unique "Data Fusion":
-  - **SCRAPED DATA (The Truth)**: What the public sees. If Agoda says a hotel sold 100 nights, those 100 nights happened.
-  - **SUBMITTED DATA (The Claim)**: What the hotel tells the state.
-  - **EXPECTED TAX (The Target)**: The math doesn't lie. `(Scraped Nights - Submitted Nights) * Tax Rate = Tax Leakage`.
-- **Gap Identification**: By joining these datasets, the dashboard highlights specific properties where the **Scraped Nights > Submitted Nights**.
+  - **SCRAPED DATA (The Market Reality)**: The latest inventory observation for specific stay dates.
+  - **SUBMITTED DATA (The Claim)**: What the hotel tells the state for that period.
+  - **EXPECTED TAX (The Target)**: `(Scraped Nights - Submitted Nights) * Tax Rate = Tax Leakage`.
+- **Deduplication Engine**: If we scan the same weekend three times, our system is smart enough to **only count the latest observation** per stay date. This prevents "double counting" and ensures the audit is scientifically accurate.
+- **Gap Identification**: By joining these datasets, the dashboard highlights specific properties where the **Scraped Nights (Stay Date) > Submitted Nights**.
 - **Actionable Enforcement**: We don't just say "tax is missing"; we provide the **exact property name, registration number, and the RM value** of the discrepancy.
 - **Transparency Note (Active Supply vs. Total Rooms)**:
   - **Limitation**: OTAs (Agoda/Booking) do not reveal a hotel's _total_ room count (e.g., they won't say "this hotel has 50 rooms in total").
@@ -102,10 +104,9 @@ This document outlines how the system addresses key business questions regarding
 
 ---
 
-## 8. Known Bottlenecks (The Reality Check)
-
-- **Not Real-Time**: This is the primary bottleneck. The system does **not** catch every single room change the second it happens. It works in **Batch Mode**, processing data from specific time periods.
+- **Not Real-Time**: This is the primary bottleneck. The system does **not** catch every single room change the second it happens. It works in **Batch Mode**, processing data for specific Booking Windows.
 - **Manual Execution Needed**: Because it is batch-based, it requires a staff member to manually start the process to get the latest analysis.
+- **Stay Date Reliance**: The audit is only as good as the date range selected. You must select the **Stay Date** range (e.g., March 1st to 31st) to accurately compare against monthly tax submissions.
 - **Offline Gaps**: Direct walk-ins that aren't listed on Agoda/Booking cannot be tracked digitally. Our data is a "Top-Tier Proxy," not a total replacement for physical checks.
 
 ---

@@ -8,9 +8,11 @@ venv/
 # Project specific
 logs/
 data/
+cache-directory/
 *.db
 *.log
 .DS_Store
 
 # Secrets
 configs/secrets.yaml
+cache-directory/

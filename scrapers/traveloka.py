@@ -6,13 +6,13 @@ from datetime import datetime
 from utils.helpers import get_future_date, save_to_csv, get_browser_config, logger, clean_price, get_month_name
 from utils.database import save_snapshot
 
-def scrape_traveloka(location="Kuala Lumpur", district="Unknown", days_ahead=2, nights=1, target_count=50, use_proxy=False):
+def scrape_traveloka(location="Kuala Lumpur", district="Unknown", days_ahead=28, nights=1, target_count=100, use_proxy=False, base_date=None):
     """
     Scrapes hotel data from Traveloka Malaysia.
     Uses UI-based search for reliability across different areas.
     """
-    checkin_date = get_future_date(days_ahead)
-    checkout_date = get_future_date(days_ahead + nights)
+    checkin_date = get_future_date(days_ahead, base_date=base_date)
+    checkout_date = get_future_date(days_ahead + nights, base_date=base_date)
     month_name = get_month_name()
     
     # We navigate to the hotel home page first to use the search bar for reliability

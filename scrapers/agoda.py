@@ -5,9 +5,9 @@ from datetime import datetime
 from utils.helpers import get_future_date, save_to_csv, get_browser_config, logger, clean_price, get_month_name
 from utils.database import save_snapshot
 
-def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", days_ahead=9, nights=1, target_count=100, use_proxy=False):
-    checkin_date = get_future_date(days_ahead)
-    checkout_date = get_future_date(days_ahead + nights)
+def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", days_ahead=9, nights=1, target_count=100, use_proxy=False, base_date=None):
+    checkin_date = get_future_date(days_ahead, base_date=base_date)
+    checkout_date = get_future_date(days_ahead + nights, base_date=base_date)
     month_name = get_month_name()
     
     url = f"https://www.agoda.com/en-gb/search?city={city_id}&checkIn={checkin_date}&checkOut={checkout_date}&rooms=1&adults=2&children=0&priceCur=MYR&textToSearch={location}"
@@ -90,6 +90,23 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
                         if title == "N/A" or not title or title.isdigit() or title in seen_names:
                             continue
                         
+                        # Get room URL for operator scraping
+                        room_url = ""
+                        try:
+                            # Agoda cards are often links themselves or have a nested link
+                            href = card.get_attribute("href")
+                            if not href:
+                                link_el = card.locator('a').first
+                                if link_el.count() > 0:
+                                    href = link_el.get_attribute("href")
+                            
+                            if href:
+                                if href.startswith('http'):
+                                    room_url = href.split('?')[0]
+                                else:
+                                    room_url = f"https://www.agoda.com{href.split('?')[0]}"
+                        except: pass
+
                         data_js = card.evaluate("""
                             (card) => {
                                 let original = "N/A";
@@ -125,6 +142,30 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
                             }
                         """)
                         
+                        # Scrape Operator Name for home-like properties
+                        operator = "N/A"
+                        if data_js['hotelType'] != "Hotel" and room_url:
+                            try:
+                                room_page = context.new_page()
+                                room_page.goto(room_url, timeout=30000, wait_until="domcontentloaded")
+                                room_page.wait_for_timeout(2000)
+                                
+                                # Agoda host selectors
+                                operator = room_page.evaluate("""() => {
+                                    // Look for host name in specific sections
+                                    const hostEl = document.querySelector('[data-selenium="host-name"], .HostInfo__Name');
+                                    if (hostEl) return hostEl.innerText.trim();
+                                    
+                                    // Alternative: look for "Managed by"
+                                    const allText = document.body.innerText;
+                                    const managedMatch = allText.match(/Managed by\\s*([^\\n.]+)/i);
+                                    return managedMatch ? managedMatch[1].trim() : 'N/A';
+                                }""")
+                                room_page.close()
+                            except:
+                                try: room_page.close()
+                                except: pass
+
                         orig_val = clean_price(data_js['original'])
                         curr_val = clean_price(data_js['current'])
                         price_diff = orig_val - curr_val if (orig_val > 0 and curr_val > 0) else 0
@@ -136,7 +177,7 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
                             "Check-in Date": checkin_date,
                             "Check-out Date": checkout_date,
                             "Nights": nights,
-                            "Stay Date": checkin_date, # Keep for backward compatibility
+                            "Stay Date": checkin_date, 
                             "Month": month_name,
                             "Original Price": data_js['original'],
                             "Discounted Price": data_js['current'],
@@ -146,6 +187,7 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
                             "Bookings Today": int(data_js['bookings_today']) if data_js['bookings_today'].isdigit() else 0,
                             "Rooms Left": data_js['rooms_left'] if data_js['rooms_left'] != "N/A" else "Unknown",
                             "Hotel Type": data_js['hotelType'],
+                            "Operator": operator,
                             "Platform": "Agoda",
                             "Created At": datetime.now().strftime("%Y-%m-%d %H:%M")
                         }

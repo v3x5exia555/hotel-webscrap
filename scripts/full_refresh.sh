@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Configuration
-PROJECT_ROOT="/home/v3/Desktop/hotel"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 VENV_PYTHON="$PROJECT_ROOT/venv/bin/python3"
 LOG_FILE="$PROJECT_ROOT/logs/full_refresh.log"
 LOCK_FILE="/tmp/hotel_refresh.lock"

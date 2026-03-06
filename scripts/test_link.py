@@ -1,8 +1,13 @@
-import pandas as pd
-import sqlite3
+import sys
 import os
+import pandas as pd
+from pathlib import Path
 
-DB_PATH = "data/hotel_data.db"
+# Add project root to sys.path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from utils.database import fetch_data_from_db
+
 REG_PATH = "data/property_registration.csv"
 SUBMITTED_PATH = "data/submitted_records.csv"
 
@@ -16,18 +21,17 @@ def fuzzy_match(ota_name, official_names):
     return None
 
 def test_data_link():
-    if not os.path.exists(DB_PATH):
-        print("DB not found")
+    print("Fetching data for test link from database...")
+    df = fetch_data_from_db("snapshots", limit=100000)
+    
+    if df is None or df.empty:
+        print("No snapshots found in database.")
         return
     
-    conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query("SELECT * FROM snapshots", conn)
-    conn.close()
-
     reg_df = pd.read_csv(REG_PATH) if os.path.exists(REG_PATH) else pd.DataFrame()
     sub_df = pd.read_csv(SUBMITTED_PATH) if os.path.exists(SUBMITTED_PATH) else pd.DataFrame()
 
-    print(f"Snapshots: {len(df)}")
+    print(f"Snapshots loaded: {len(df)}")
     master_df = df.groupby(['hotel_name', 'location']).agg({'platform': 'last'}).reset_index()
     print(f"Unique OTA Hotels: {len(master_df)}")
 

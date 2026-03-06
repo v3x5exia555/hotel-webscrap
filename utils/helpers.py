@@ -22,9 +22,16 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-def get_future_date(days_ahead):
-    """Returns a date string for N days in the future."""
-    return (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+def get_future_date(days_ahead, base_date=None):
+    """Returns a date string for N days in the future relative to base_date."""
+    if base_date:
+        if isinstance(base_date, str):
+            start = datetime.strptime(base_date, "%Y-%m-%d")
+        else:
+            start = base_date
+    else:
+        start = datetime.now()
+    return (start + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
 
 def save_to_csv(data, platform="Unknown", days_ahead=0, nights=1, location="Unknown", output_dir="data"):
     """Saves a list of dictionaries to a CSV file in a platform-specific and date-specific folder."""

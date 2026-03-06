@@ -5,9 +5,9 @@ from datetime import datetime
 from utils.helpers import get_future_date, save_to_csv, get_browser_config, logger, clean_price, get_month_name
 from utils.database import save_snapshot
 
-def scrape_booking(location="Kuala Lumpur", district="Unknown", days_ahead=28, nights=1, target_count=100, use_proxy=False):
-    checkin_date = get_future_date(days_ahead)
-    checkout_date = get_future_date(days_ahead + nights)
+def scrape_booking(location="Kuala Lumpur", district="Unknown", days_ahead=28, nights=1, target_count=100, use_proxy=False, base_date=None):
+    checkin_date = get_future_date(days_ahead, base_date=base_date)
+    checkout_date = get_future_date(days_ahead + nights, base_date=base_date)
     month_name = get_month_name()
     
     search_location = f"{location}, Pahang, Malaysia"
@@ -112,10 +112,21 @@ def scrape_booking(location="Kuala Lumpur", district="Unknown", days_ahead=28, n
                 if len(hotels_data) >= target_count:
                     break
                 try:
+                    # Extract Name
                     title_el = card.locator('div[data-testid="title"]')
                     title = title_el.inner_text().strip().replace('"', '') if title_el.count() > 0 else "N/A"
                     if title == "N/A" or title.isdigit() or title in seen_names: continue
-                        
+
+                    # Get room URL for operator scraping
+                    room_link_el = card.locator('a[data-testid="title-link"]').first
+                    room_url = ""
+                    if room_link_el.count() > 0:
+                        href = room_link_el.get_attribute("href")
+                        if href:
+                            room_url = href.split('?')[0] if '?' in href else href
+                            if not room_url.startswith('http'):
+                                room_url = f"https://www.booking.com{room_url}"
+
                     data_js = card.evaluate("""
                         (card) => {
                             let original = "N/A";
@@ -161,7 +172,33 @@ def scrape_booking(location="Kuala Lumpur", district="Unknown", days_ahead=28, n
                             return { original, current, bookings_recent, rooms_left, availability, hotelType };
                         }
                     """)
-                    
+
+                    # Scrape Operator Name for non-traditional hotels
+                    operator = "N/A"
+                    if data_js['hotelType'] != "Hotel" and room_url:
+                        try:
+                            # Visiting individual hotel page for host info
+                            # Note: To keep it fast, we only do this for suspicious types
+                            room_page = context.new_page()
+                            room_page.goto(room_url, timeout=30000, wait_until="domcontentloaded")
+                            room_page.wait_for_timeout(2000)
+                            
+                            # Different selectors for host info on Booking.com
+                            host_el = room_page.locator('[id="host_name"], [data-testid="host-profile-header-name"]').first
+                            if host_el.count() > 0:
+                                operator = host_el.inner_text().strip()
+                            else:
+                                # Fallback: search for "Managed by"
+                                operator = room_page.evaluate("""() => {
+                                    const els = Array.from(document.querySelectorAll('div, span, p'));
+                                    const hostText = els.find(e => e.innerText && e.innerText.includes('Managed by'));
+                                    return hostText ? hostText.innerText.replace('Managed by', '').trim() : 'N/A';
+                                }""")
+                            room_page.close()
+                        except:
+                            try: room_page.close()
+                            except: pass
+
                     original_price = data_js['original'].replace('\xa0', ' ')
                     discounted_price = data_js['current'].replace('\xa0', ' ')
                     orig_val = clean_price(original_price)
@@ -175,7 +212,7 @@ def scrape_booking(location="Kuala Lumpur", district="Unknown", days_ahead=28, n
                         "Check-in Date": checkin_date,
                         "Check-out Date": checkout_date,
                         "Nights": nights,
-                        "Stay Date": checkin_date, # Keep for backward compatibility
+                        "Stay Date": checkin_date, 
                         "Month": month_name,
                         "Original Price": original_price,
                         "Discounted Price": discounted_price,
@@ -185,6 +222,7 @@ def scrape_booking(location="Kuala Lumpur", district="Unknown", days_ahead=28, n
                         "Bookings Recent": int(data_js['bookings_recent']) if data_js['bookings_recent'].isdigit() else 0,
                         "Rooms Left": data_js['rooms_left'] if data_js['rooms_left'] != "N/A" else "Unknown",
                         "Hotel Type": data_js.get('hotelType', 'Hotel'),
+                        "Operator": operator,
                         "Platform": "Booking.com",
                         "Created At": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
