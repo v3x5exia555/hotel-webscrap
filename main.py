@@ -103,8 +103,9 @@ def run_scrapers_from_config(config_path="configs/locations.yaml", use_proxy=Fal
     tasks = []
     # Nested loops as requested by user
     for n_duration in range(1, nights + 1):
-        for d_offset in range(days):
-            # i here represents the day offset from start_date
+        # If nights=1, minimum days_ahead must be 2
+        min_day = 2 if n_duration == 1 else 0
+        for d_offset in range(min_day, days):
             for loc in processed_locations:
                 for platform in platforms:
                     tasks.append((platform, loc, d_offset, n_duration, use_proxy, start_date))
