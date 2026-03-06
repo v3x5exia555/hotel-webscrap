@@ -46,7 +46,7 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
             try:
                 # Agoda often has this text in h1, h3 or specialized data elements
                 total_text_selector = 'h1, h3, [data-element-name="properties-available-text"], .SrpHeader__TotalProperties'
-                page.wait_for_selector(total_text_selector, timeout=12000)
+                page.wait_for_selector(total_text_selector, timeout=SCRAPER_CONFIG['selector_timeout'] * 1000)
                 total_text = page.locator(total_text_selector).first.inner_text()
                 
                 import re

@@ -76,7 +76,7 @@ def scrape_traveloka(location="Kuala Lumpur", district="Unknown", days_ahead=28,
             # Check for results container
             card_selector = 'div.r-14lw9ot.r-1xfd6ze.r-1loqt21, div[data-testid="hotel-card"]'
             try:
-                page.wait_for_selector(card_selector, timeout=20000)
+                page.wait_for_selector(card_selector, timeout=SCRAPER_CONFIG['selector_timeout'] * 1000)
             except:
                 logger.warning(f"[Traveloka] No results cards found for {location} within timeout.")
                 # Maybe try a reload or check if 'no results' message

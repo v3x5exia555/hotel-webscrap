@@ -50,7 +50,7 @@ def scrape_booking(location="Kuala Lumpur", district="Unknown", days_ahead=28, n
                 # Based on user snippet: <h1 ...>Pahang: 3,007 properties found</h1>
                 # or <h1 aria-live="assertive" ...>
                 total_text_selector = 'h1[aria-live="assertive"], h1:has-text("properties found")'
-                page.wait_for_selector(total_text_selector, timeout=15000)
+                page.wait_for_selector(total_text_selector, timeout=SCRAPER_CONFIG['selector_timeout'] * 1000)
                 total_text = page.locator(total_text_selector).first.inner_text()
                 
                 import re
