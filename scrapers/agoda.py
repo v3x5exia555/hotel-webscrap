@@ -1,5 +1,6 @@
 import time
 import sys
+import os
 from playwright.sync_api import sync_playwright
 from datetime import datetime
 from utils.helpers import get_future_date, save_to_csv, get_browser_config, logger, clean_price, get_month_name, SCRAPER_CONFIG
@@ -224,6 +225,12 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
                 logger.info(f"[Agoda] ✅ Saved {len(hotels_data)} items for {location}")
             else:
                 logger.warning(f"[Agoda] ⚠️ No data extracted for {location}")
+                # Debug screenshot
+                debug_dir = os.path.join("logs", "debug")
+                if not os.path.exists(debug_dir): os.makedirs(debug_dir)
+                screenshot_path = os.path.join(debug_dir, f"agoda_fail_{location}_{datetime.now().strftime('%H%M%S')}.png")
+                page.screenshot(path=screenshot_path)
+                logger.info(f"[Agoda] Saved debug screenshot to {screenshot_path}")
                 
         except Exception as e:
             logger.error(f"[Agoda] Error: {e}")
