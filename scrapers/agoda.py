@@ -17,8 +17,14 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
     
     with sync_playwright() as p:
         browser_cfg = get_browser_config(use_proxy=use_proxy)
-        browser = p.chromium.launch(headless=True)
+        # Stealth: Add args to hide automation
+        browser = p.chromium.launch(
+            headless=True, 
+            args=["--disable-blink-features=AutomationControlled"]
+        )
         context = browser.new_context(**browser_cfg)
+        # Extra stealth: Ensure navigator.webdriver is false
+        context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = context.new_page()
         
         hotels_data = []
@@ -30,8 +36,10 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
             nav_timeout = SCRAPER_CONFIG['timeout'] * 1000  # convert seconds to ms
             for attempt in range(max_retries):
                 try:
-                    # Using networkidle might be slower but for Agoda's SPA it's more reliable
-                    page.goto(url, timeout=nav_timeout, wait_until="networkidle")
+                    # 'domcontentloaded' is faster; we'll handle SPA loading with wait_for_selector
+                    page.goto(url, timeout=nav_timeout, wait_until="domcontentloaded")
+                    # Fixed wait for SPA skeleton to load
+                    time.sleep(10)
                     break
                 except Exception as e:
                     if attempt == max_retries - 1: raise e
@@ -58,7 +66,11 @@ def scrape_agoda(location="Kuala Lumpur", district="Unknown", city_id="14524", d
                     target_count = detected_total
                     logger.info(f"[Agoda] Detected {detected_total} total properties. Target: {target_count}")
             except Exception as e:
-                logger.warning(f"[Agoda] Could not detect total properties count: {e}. Defaulting to: {target_count}")
+                # If we fail here, check if it's a bot block
+                title = page.title()
+                if "human" in title.lower() or "moment" in title.lower() or "verification" in title.lower():
+                    logger.error(f"[Agoda] 🤖 BOT DETECTION DETECTED! Page title: '{title}'")
+                logger.warning(f"[Agoda] Could not detect total properties count: {e}. Page: '{title}' @ {page.url}")
 
             # Give SPA a moment to start rendering
             page.wait_for_timeout(5000)
